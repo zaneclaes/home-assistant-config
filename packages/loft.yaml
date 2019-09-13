@@ -1,0 +1,231 @@
+variable:
+  last_motion_time_loft:
+    value: 'startup'
+  last_motion_time_loft_bathroom:
+    value: 'startup'
+
+timer:
+  loft_motion_stop:
+    duration: '03:00:00'
+  loft_bathroom_motion_stop:
+    duration: '00:15:00'
+
+light:
+  - platform: group
+    name: Loft Lights
+    entities:
+    - light.loft
+
+scene:
+  - name: Loft Relax
+    entities:
+      light.loft_lights:
+        state: true
+        brightness: 64
+        rgb_color:
+          - 255
+          - 210
+          - 129
+      switch.loft_fairy_lights:
+        state: true
+  - name: Loft Energize
+    entities:
+      light.loft_lights:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 246
+          - 255
+          - 254
+  - name: Loft Pink
+    entities:
+      light.loft_overhead:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 255
+          - 53
+          - 185
+  - name: Loft Orange
+    entities:
+      light.loft_overhead:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 255
+          - 88
+          - 42
+  - name: Loft Blue
+    entities:
+      light.loft_overhead:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 63
+          - 79
+          - 255
+  - name: Loft Bathroom Pink
+    entities:
+      light.loft_bathroom:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 255
+          - 53
+          - 185
+  - name: Loft Bathroom Blue
+    entities:
+      light.loft_bathroom:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 63
+          - 79
+          - 255
+  - name: Loft Bathroom Orange
+    entities:
+      light.loft_bathroom:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 255
+          - 88
+          - 42
+
+sensor:
+  - platform: template
+    sensors:
+      # Use the overhead to detect the overall brightness of the loft:
+      loft_brightness:
+        friendly_name: "Loft Brightness"
+        value_template: >-
+          {% if is_state('light.loft', 'on') %}
+            {{ states.light.loft.attributes.brightness | int }}
+          {% else %}
+            0
+          {% endif %}
+
+automation:
+  # Loft overhead brightness changed or turned on
+  - id: loft_fairy_lights_on
+    alias: Loft Fairy Lights (On)
+    initial_state: 'on'
+    trigger:
+    - entity_id: light.loft
+      platform: state
+      to: 'on'
+    - entity_id: sensor.evening_features_enabled
+      platform: state
+      to: 'on'
+    condition:
+    - condition: state
+      entity_id: light.loft
+      state: 'on'
+    - condition: state
+      entity_id: sensor.evening_features_enabled
+      state: 'on'
+    action:
+    - service: switch.turn_on
+      entity_id: switch.loft_fairy_lights
+
+  # Loft overhead turned off
+  - id: loft_fairy_lights_off
+    alias: Loft Fairy Lights (Off)
+    initial_state: 'on'
+    trigger:
+    - entity_id: light.loft
+      platform: state
+      to: 'off'
+    - entity_id: sensor.evening_features_enabled
+      platform: state
+      to: 'off'
+    condition: []
+    action:
+    - service: switch.turn_off
+      entity_id: switch.loft_fairy_lights
+
+  # Loft Motion Stop
+  - id: loft_motion_stop
+    alias: Loft Motion Stopped
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.loft_motion_stop
+      event_type: timer.finished
+      platform: event
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.loft
+
+  # Bathroom - Door Motion
+  - id: loft_motion
+    alias: Loft Motion
+    initial_state: 'on'
+    trigger:
+    - entity_id: binary_sensor.loft_motion
+      platform: state
+      to: 'on'
+    condition: []
+    action:
+    - service: script.motion_detected
+      data:
+        timer_id: timer.loft_motion_stop
+        area_id: loft
+
+  # Bathroom - Door Motion
+  - id: loft_bathroom_door_motion
+    alias: Loft Bathroom Door Motion
+    initial_state: 'on'
+    trigger:
+    - entity_id: binary_sensor.loft_bathroom_door_motion
+      platform: state
+      to: 'on'
+    condition:
+    - condition: state
+      entity_id: input_boolean.guest_mode
+      state: 'off'
+    action:
+    - service: script.motion_detected
+      data:
+        timer_id: timer.loft_bathroom_motion_stop
+        area_id: loft_bathroom
+    - service: script.lights_random_pretty_if_off
+      data:
+        light_id: light.loft_bathroom
+
+  # Bathroom - Motion Stopped, Door Open
+  - id: loft_bathroom_door_motion_stopped_lights_off
+    alias: Loft Bathroom Motion Stopped, Lights Off
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.loft_bathroom_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition:
+    - condition: state
+      entity_id: binary_sensor.loft_bathroom_door_open
+      state: 'on'
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.loft_bathroom
+
+  # Bathroom - Motion Stopped, Door Closed
+  - id: loft_bathroom_door_motion_stopped_lights_wait
+    alias: Loft Bathroom Motion Stopped, Wait For Door
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.loft_bathroom_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition:
+    - condition: state
+      entity_id: binary_sensor.loft_bathroom_door_open
+      state: 'off'
+    action:
+    - service: timer.start
+      data:
+        entity_id: timer.loft_bathroom_motion_stop

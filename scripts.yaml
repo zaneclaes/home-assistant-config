@@ -1,0 +1,43 @@
+hue_random_scene:
+  alias: Hue Random Scene
+  sequence:
+  # Turn on an assumed scene.
+  - service: hue.hue_activate_scene
+    data_template:
+      group_name: "{{ group_name }}"
+      scene_name: "Spring Blossom" # TODO: Make random scene.
+
+# A hue light changed state. Update another light in the room.
+#   entity_id, brightness = for the target light
+#   group_id, group_name = internal & Hue app identifiers
+update_lights_for_hue_state_change:
+  alias: Hue Lights -> Room
+  sequence:
+  - service: light.turn_on
+    data_template:
+      entity_id: "{{ light_id }}"
+      brightness: "{{ brightness | int }}"
+
+# Turn on a random hue scene.
+lights_random_pretty:
+  alias: Random Pretty Color
+  sequence:
+  - service: light.turn_on
+    data_template:
+      entity_id: "{{ light_id }}"
+      hs_color:
+        - "{{ range(360)|random }}"
+        - "{{ range(80,101)|random }}"
+      brightness_pct: 100
+
+# Turn on a random hue scene IF the light is off
+lights_random_pretty_if_off:
+  alias: Random Pretty Color (If Off)
+  sequence:
+  # Check that the light is off
+  - condition: template
+    value_template: "{{ is_state(light_id, 'off') }}"
+  # Then call the script (do not re-implement)
+  - service: script.lights_random_pretty
+    data_template:
+      light_id: "{{ light_id }}"

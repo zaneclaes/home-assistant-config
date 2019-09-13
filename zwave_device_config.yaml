@@ -1,0 +1,12 @@
+sensor.aeon_labs_zw130_wallmote_quad_sourcenodeid:
+  ignored: false
+  polling_intensity: 1
+switch.wallmote_quad:
+  ignored: false
+  polling_intensity: 1
+climate.loft_ac:
+  ignored: false
+  polling_intensity: 1
+lock.front_door_deadbolt:
+  ignored: false
+  polling_intensity: 1

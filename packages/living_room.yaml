@@ -1,0 +1,255 @@
+variable:
+  last_motion_time_living_room:
+    value: 'startup'
+
+input_boolean:
+  living_room_projector_switch_enabled:
+    name: Living Room Projector Switch Enabled
+    initial: true
+
+timer:
+  living_room_motion_stop:
+    duration: '03:00:00'
+
+remote:
+  - platform: harmony
+    name: Projector
+    activity: Projector
+    host: 192.168.1.9
+
+switch:
+  - platform: template
+    switches:
+      living_room_projector:
+        value_template: "{{ states.remote.projector.state }}"
+        turn_on:
+          service: remote.turn_on
+          data:
+            entity_id: remote.projector
+        turn_off:
+          service: remote.turn_off
+          data:
+            entity_id: remote.projector
+
+light:
+  - platform: group
+    name: Living Room Hue Lights
+    entities:
+    - light.dog_den
+    - light.kitchen_strip
+    - light.projector_strip
+    - light.tree_lamp
+    - light.bookcase_strip
+
+  - platform: group
+    name: Living Room Lights
+    entities:
+    - light.living_room_hue_lights
+    - light.living_room_chandelier
+
+script:
+  turn_on_living_room_projector:
+    alias: Toggle Switch but Prevent Repeat
+    sequence:
+    - service_template: "switch.turn_on"
+      data_template:
+        entity_id: switch.living_room_projector
+    - delay: '00:01:00'
+  turn_off_living_room_projector:
+    alias: Toggle Switch but Prevent Repeat
+    sequence:
+    - service_template: "switch.turn_off"
+      data_template:
+        entity_id: switch.living_room_projector
+    - delay: '00:02:00'
+  apple_tv_open:
+    alias: Loft - Activate Scene
+    sequence:
+      - service: remote.send_command
+        data:
+          entity_id: remote.apple_tv
+          command:
+            - menu
+      - delay: 00:00:02
+      - service: remote.send_command
+        data:
+          entity_id: remote.apple_tv
+          command:
+            - top_menu
+      - delay: 00:00:02
+      - service: remote.send_command
+        data:
+          entity_id: remote.apple_tv
+          command:
+            - right
+            - right
+            - down
+      - delay: 00:00:02
+      - service: remote.send_command
+        data:
+          entity_id: remote.apple_tv
+          command:
+            - select
+
+sensor:
+  - platform: template
+    sensors:
+      # Use the tree lamp to detect the overall brightness of the living room:
+      living_room_brightness:
+        friendly_name: "Living Room Brightness"
+        value_template: >-
+          {% if is_state('light.living_room_chandelier', 'on') %}
+            {{ states.light.living_room_chandelier.attributes.brightness | int }}
+          {% else %}
+            0
+          {% endif %}
+
+      living_room_projector:
+        friendly_name: "Living Room Projector"
+        value_template: >-
+          {%- if is_state('input_boolean.living_room_projector_switch_enabled', 'off') -%}
+            turning {{ states.switch.living_room_projector.state }}...
+          {%- else -%}
+            {{ states.switch.living_room_projector.state }}
+          {%- endif -%}
+
+media_player:
+  - platform: universal
+    name: Living Room Projector
+    children:
+      - media_player.living_room_sonos
+    state_template: "{{ states.switch.living_room_projector.state }}"
+    commands:
+      turn_on:
+        service: script.turn_on_living_room_projector
+      turn_off:
+        service: script.turn_off_living_room_projector
+      volume_up:
+        service: media_player.volume_up
+        data:
+          entity_id: media_player.living_room_sonos
+      volume_down:
+        service: media_player.volume_down
+        data:
+          entity_id: media_player.living_room_sonos
+      volume_mute:
+        service: media_player.volume_mute
+        data:
+          entity_id: media_player.living_room_sonos
+    attributes:
+      volume_level: media_player.living_room_sonos|volume_level
+      is_volume_muted: media_player.living_room_sonos|is_volume_muted
+      source: ""
+      source_list: ""
+
+automation:
+  # Respond to hue light changes...
+  - id: living_room_chandelier_brightness_change
+    alias: Living Room Chandelier Brightness Change
+    initial_state: 'on'
+    trigger:
+      - platform: state
+        entity_id: light.living_room_chandelier
+        to: 'on'
+      # Or if the kitchen's brightness (coded in sensor) changes
+      - platform: state
+        entity_id: sensor.living_room_brightness
+    condition:
+    - condition: state
+      entity_id: light.living_room_chandelier
+      state: 'on'
+    action:
+    # Update the chandelier's brightness based upon hue lights...
+    - service: light.turn_on
+      data_template:
+        entity_id: "light.living_room_hue_lights"
+        brightness: "{{ states.sensor.living_room_brightness.state }}"
+
+  - id: living_room_chandelier_off
+    alias: Living Room Chandelier Off
+    initial_state: 'on'
+    trigger:
+      # If the Hue lights change state at all (i.e., button-press on/off)
+      - platform: state
+        entity_id: light.living_room_chandelier
+        to: 'off'
+      # Or if the kitchen's brightness (coded in sensor) changes
+      # - platform: state
+      #   entity_id: sensor.living_room_brightness
+    condition: []
+    action:
+    # Update the chandelier's brightness based upon hue lights...
+    - service: light.turn_off
+      data_template:
+        entity_id: "light.living_room_hue_lights"
+
+  # Motion Began
+  - id: living_room_motion
+    alias: Living Room Motion
+    initial_state: 'on'
+    trigger:
+    - entity_id: sensor.living_room_megasensor_burglar
+      platform: state
+      to: '8'
+    condition: []
+    action:
+    - service: script.motion_detected
+      data:
+        timer_id: timer.living_room_motion_stop
+        area_id: living_room
+
+  # Motion Stopped
+  - id: living_room_motion_motion_stopped
+    alias: Living Room Motion Stopped
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.living_room_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.living_room_lights
+        transition: 5
+
+scene:
+  - name: Living Room Relax
+    entities:
+      light.living_room_chandelier:
+        state: true
+        brightness: 64
+      light.living_room_hue_lights:
+        state: true
+        brightness: 64
+        rgb_color:
+          - 255
+          - 210
+          - 129
+  - name: Living Room Energize
+    entities:
+      light.living_room_chandelier:
+        state: true
+        brightness: 254
+      light.living_room_hue_lights:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 246
+          - 255
+          - 254
+  - name: Living Room Pink
+    entities:
+      light.living_room_chandelier:
+        state: false
+      light.living_room_hue_lights:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 255
+          - 63
+          - 210
+      # media_player.living_room:
+      #   media_artist: "Taylor Swift"
+      #   media_title: "Love Story"

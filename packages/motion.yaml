@@ -1,0 +1,55 @@
+variable:
+  last_motion_time:
+    attributes:
+      icon: mdi:alarm
+  last_motion_area:
+    attributes:
+      icon: mdi:alarm
+
+script:
+  # When motion is detected, start a timer and record it.
+  motion_detected:
+    alias: Motion Detected
+    sequence:
+    - service: timer.start
+      data_template:
+        entity_id: "{{ timer_id }}"
+    - service: variable.set_variable
+      data_template:
+        variable: last_motion_time
+        value: "{{ now() }}"
+    - service: variable.set_variable
+      data_template:
+        variable: "last_motion_time_{{ area_id }}"
+        value: "{{ now() }}"
+    - service: variable.set_variable
+      data_template:
+        variable: last_motion_area
+        value: "{{ area_id }}"
+
+  # Motion in bathrooms, hallways, or other "ambient" lights
+  lights_ambient_motion:
+    alias: Lights Ambient Motion
+    sequence:
+    # Only turn on lights when people are awake
+    - condition: state
+      entity_id: sensor.awake
+      state: 'on'
+    # Turn on light
+    - service: light.turn_on
+      data_template:
+        entity_id: "{{ light_id }}"
+        brightness_pct: "{{ states.sensor.sun_brightness_pct.state }}"
+        color_temp: "{{ states.sensor.sun_color_temp.state }}"
+
+  # Trigger above IF the light is off
+  lights_ambient_motion_if_off:
+    alias: Lights Ambient Motion (If Off)
+    sequence:
+    # Check that the light is off
+    - condition: template
+      value_template: "{{ is_state(light_id, 'off') }}"
+    # Then call the script (do not re-implement)
+    - service: script.lights_ambient_motion
+      data_template:
+        light_id: "{{ light_id }}"

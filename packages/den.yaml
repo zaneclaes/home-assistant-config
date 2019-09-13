@@ -1,0 +1,392 @@
+variable:
+  last_motion_time_den_bathroom:
+    value: 'startup'
+  last_motion_time_den:
+    value: 'startup'
+
+timer:
+  den_motion_stop:
+    duration: '03:00:00'
+  den_closet_motion_right_stop:
+    duration: '00:03:00'
+  den_closet_motion_left_stop:
+    duration: '00:03:00'
+  den_bathroom_motion_stop:
+    duration: '00:30:00'
+
+switch:
+  - platform: command_line
+    switches:
+      den_tv:
+        command_on: 'curl -X POST http://192.168.1.4:8060/keypress/PowerOn'
+        command_off: 'curl -X POST http://192.168.1.4:8060/keypress/PowerOff'
+        command_state: 'curl -s GET http://192.168.1.4:8060/query/device-info | grep power-mode | sed -e "s:<power-mode>DisplayOff</power-mode>:OFF:" -e "s:<power-mode>PowerOn</power-mode>:ON:"'
+        value_template: '{{ value == "ON" }}'
+
+script:
+  set_den_tv:
+    alias: Toggle Switch but Prevent Repeat
+    sequence:
+    - service_template: "switch.turn_{{ switch_state }}"
+      data_template:
+        entity_id: switch.den_tv
+    - delay: '00:00:30'
+
+sensor:
+  - platform: template
+    sensors:
+      # Use the overhead to detect the overall brightness of the loft:
+      den_brightness:
+        friendly_name: "Den Brightness"
+        value_template: >-
+          {% if is_state('light.den_overhead', 'on') %}
+            {{ states.light.den_overhead.attributes.brightness | int }}
+          {% else %}
+            0
+          {% endif %}
+
+      den_tv:
+        friendly_name: "Den TV"
+        value_template: >-
+          {%- if is_state('input_boolean.den_tv_switch_enabled', 'off') -%}
+            turning {{ states.switch.den_tv.state }}...
+          {%- else -%}
+            {{ states.switch.den_tv.state }}
+          {%- endif -%}
+
+light:
+  - platform: group
+    name: Den Lights
+    entities:
+    - light.den_overhead
+    - light.den_dimmer_outlet
+
+  - platform: group
+    name: Den Closet Right Lights
+    entities:
+    - light.den_closet_globe
+    - light.den_closet_spot_right
+    - light.den_closet_overhead_right
+
+  - platform: group
+    name: Den Closet Left Lights
+    entities:
+    - light.den_closet_spot_left
+    - light.den_closet_overhead_left
+    - light.den_closet_strip
+
+  - platform: group
+    name: Den Closet Lights
+    entities:
+    - light.den_closet_globe
+    - light.den_closet_spot_left
+    - light.den_closet_spot_right
+    - light.den_closet_overhead_left
+    - light.den_closet_overhead_right
+    - light.den_closet_strip
+
+  - platform: group
+    name: Den Bathroom Lights
+    entities:
+    - light.den_bathroom_1
+    - light.den_bathroom_2
+    - light.den_bathroom_3
+
+scene:
+  - name: Den Relax
+    entities:
+      light.den_lights:
+        state: true
+        brightness: 64
+        rgb_color:
+          - 255
+          - 210
+          - 129
+  - name: Den Energize
+    entities:
+      light.den_lights:
+        state: true
+        brightness: 254
+        rgb_color:
+          - 246
+          - 255
+          - 254
+  - name: Den Sunset
+    entities:
+      light.den_lights:
+        state: true
+        brightness: 199
+        rgb_color:
+          - 255
+          - 126
+          - 69
+
+media_player:
+  - platform: universal
+    name: Den TV
+    children:
+      - media_player.den_roku_tv
+    state_template: "{{ states.switch.den_tv.state }}"
+    commands:
+      turn_on:
+        service: script.set_den_tv
+        data:
+          switch_state: 'on'
+      turn_off:
+        service: script.set_den_tv
+        data:
+          switch_state: 'off'
+      volume_up:
+        service: media_player.volume_up
+        data:
+          entity_id: media_player.den_roku_tv
+      volume_down:
+        service: media_player.volume_down
+        data:
+          entity_id: media_player.den_roku_tv
+      volume_mute:
+        service: media_player.volume_mute
+        data:
+          entity_id: media_player.den_roku_tv
+    attributes:
+      is_volume_muted: media_player.den_roku_tv|is_volume_muted
+
+automation:
+  # # Respond to hue light changes...
+  # - id: den_brightness_change
+  #   alias: Den Brightness Change
+  #   initial_state: 'on'
+  #   trigger:
+  #     # If the lights change state at all (i.e., button-press on/off)
+  #     - platform: state
+  #       entity_id: light.den_overhead
+  #     # Or if the kitchen's brightness (coded in sensor) changes
+  #     - platform: state
+  #       entity_id: sensor.den_brightness
+  #   condition: []
+  #   action:
+  #   # Update the overhead's brightness based upon hue lights...
+  #   # - service: light.turn_on
+  #   #   data_template:
+  #   #     entity_id: light.den_overhead
+  #   #     brightness: "{{ states.sensor.den_brightness.state }}"
+  #   - service: light.turn_on
+  #     data_template:
+  #       entity_id: light.den_dimmer_outlet
+  #       brightness: "{{ states.sensor.den_brightness.state }}"
+
+  # AC - On
+  - id: den_ac_on
+    alias: Den AC On
+    initial_state: 'on'
+    trigger:
+    - platform: state
+      entity_id: sun.sun
+      to: below_horizon
+    - platform: numeric_state
+      entity_id: sensor.den_closet_right_motion_temperature
+      value_template: "{{ states.sensor.den_closet_right_motion_temperature.state }}"
+      above: 70
+    condition:
+    - condition: state
+      entity_id: sun.sun
+      state: below_horizon
+    - condition: state
+      entity_id: input_boolean.guest_mode
+      state: 'off'
+    - condition: template
+      value_template: '{{ states.sensor.den_closet_right_motion_temperature.state | float >= 74 }}'
+    action:
+    - service: switch.turn_on
+      data:
+        entity_id: switch.den_ac
+
+  # AC - Off
+  - id: den_ac_off
+    alias: Den AC Off
+    initial_state: 'on'
+    trigger:
+    - platform: state
+      entity_id: sun.sun
+      to: above_horizon
+    - platform: numeric_state
+      entity_id: sensor.den_closet_right_motion_temperature
+      value_template: "{{ states.sensor.den_closet_right_motion_temperature.state }}"
+      below: 71
+    condition: []
+    action:
+    - service: switch.turn_off
+      data:
+        entity_id: switch.den_ac
+
+  # Motion Began
+  - id: den_motion
+    alias: Den Motion
+    initial_state: 'on'
+    trigger:
+    - entity_id: binary_sensor.den_motion
+      platform: state
+      to: 'on'
+    condition: []
+    action:
+    - service: script.motion_detected
+      data:
+        timer_id: timer.den_motion_stop
+        area_id: den
+
+  # Motion Stopped
+  - id: den_motion_motion_stopped
+    alias: Den Motion Stopped
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.den_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.den_lights
+        transition: 5
+
+  # Closet - Motion Left
+  - id: den_closet_left_lights_on
+    alias: Den Closet Left Lights On
+    initial_state: 'on'
+    trigger:
+    - entity_id: binary_sensor.den_closet_motion_left
+      platform: state
+      to: 'on'
+    condition:
+    - condition: state
+      entity_id: input_boolean.guest_mode
+      state: 'off'
+    action:
+    - service: script.lights_ambient_motion
+      data:
+        light_id: light.den_closet_lights_left
+    - service: script.motion_detected
+      data:
+        timer_id: timer.den_closet_motion_left_stop
+        area_id: den
+
+  # Den Closet Left - Motion Stopped
+  - id: den_closet_left_lights_off
+    alias: Den Closet Left Lights Off
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.den_closet_motion_left_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.den_closet_lights_left
+
+  # Closet - Motion Right
+  - id: den_closet_right_lights_on
+    alias: Den Closet Right Lights On
+    initial_state: 'on'
+    trigger:
+    - entity_id: binary_sensor.den_closet_motion_right
+      platform: state
+      to: 'on'
+    condition:
+    - condition: state
+      entity_id: input_boolean.guest_mode
+      state: 'off'
+    action:
+    - service: script.lights_ambient_motion
+      data:
+        light_id: light.den_closet_lights_right
+    - service: script.motion_detected
+      data:
+        timer_id: timer.den_closet_motion_right_stop
+        area_id: den
+
+  # Den Closet Right - Motion Stopped
+  - id: den_closet_right_lights_off
+    alias: Den Closet Right Lights Off
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.den_closet_motion_right_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.den_closet_lights_right
+
+  # Bathroom - Motion
+  - id: den_bathroom_door_motion
+    alias: Den Bathroom Door Motion
+    initial_state: 'on'
+    trigger:
+    - entity_id: sensor.den_bathroom_megasensor_burglar
+      platform: state
+      to: '8'
+    condition:
+    - condition: state
+      entity_id: input_boolean.guest_mode
+      state: 'off'
+    action:
+    - service: script.motion_detected
+      data:
+        timer_id: timer.den_bathroom_motion_stop
+        area_id: den_bathroom
+    - service: script.lights_ambient_motion_if_off
+      data:
+        light_id: light.den_bathroom_lights
+
+  # Bathroom - Motion Stopped, Door Open
+  - id: den_bathroom_door_motion_stopped
+    alias: Den Bathroom Motion Stopped
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.den_bathroom_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.den_bathroom_lights
+
+  # Bathroom Humidity -> Fan On
+  - id: bathroom_fan_on
+    alias: Bathroom Fan On
+    initial_state: 'on'
+    trigger:
+    - platform: template
+      value_template: '{{ states.sensor.den_bathroom_megasensor_relative_humidity.state | float > 80 }}'
+    condition:
+    - condition: state
+      entity_id: switch.den_bathroom_fan
+      state: 'off'
+    - condition: state
+      entity_id: input_boolean.guest_mode
+      state: 'off'
+    action:
+    - service: switch.turn_on
+      entity_id: switch.den_bathroom_fan
+
+  # Bathroom Humidity -> Fan Off
+  - id: bathroom_fan_off
+    alias: Bathroom Fan Off
+    initial_state: 'on'
+    trigger:
+    - platform: template
+      value_template: '{{ states.sensor.den_bathroom_megasensor_relative_humidity.state | float <= 70 }}'
+    condition:
+    - condition: state
+      entity_id: switch.den_bathroom_fan
+      state: 'on'
+    action:
+    - service: switch.turn_off
+      entity_id: switch.den_bathroom_fan

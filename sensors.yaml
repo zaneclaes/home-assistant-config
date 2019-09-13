@@ -1,0 +1,124 @@
+- platform: template
+  sensors:
+    # Interpolate the sun's elevation into brightness
+    sun_brightness_pct:
+      friendly_name: "Sun Brightness Percent"
+      value_template: >-
+        {{ [[states.sun.sun.attributes.elevation * 4, 100] | min, 20] | max }}
+
+    # Pick a default hue scene
+    sun_color_temp:
+      friendly_name: "Sun Mireds"
+      value_template: >- # Assume range of 200-500 mireds
+        {{ ((1 - (states.sensor.sun_brightness_pct.state | float / 100)) * (500 - 200) + 200) | int }}
+
+    # Pick a default hue scene
+    hue_scene:
+      friendly_name: "Hue Scene"
+      value_template: >
+        {% set pod = states('sensor.part_of_day') %}
+        {% if pod == 'night' %}
+          Nightlight
+        {% elif pod == 'morning' %}
+          Bright
+        {% elif pod == 'dawn' %}
+          Energize
+        {% elif pod == 'afternoon' %}
+          Dimmed
+        {% elif pod == 'evening' %}
+          Read
+        {% else %}
+          Bright
+        {% endif %}
+
+    # Best-guess: are people awake?
+    awake:
+      friendly_name: "Awake"
+      value_template: >-
+        {%- if states('sensor.time').split(':')[0] | int < 5 -%}
+          off
+        {%- else -%}
+          on
+        {%- endif -%}
+
+    # https://www.reddit.com/r/homeassistant/comments/cr8jff/functional_room_card_great_for_mobile/
+    blank:
+      value_template: ''
+      friendly_name: ''
+
+    # Pick a default hue scene
+    part_of_day:
+      friendly_name: "Part of Day"
+      value_template: >
+        {% set h = (states('sensor.time').split(':')[0] | int) %}
+        {% set s = states.sun.sun.attributes.elevation %}
+        {% if s < 0 %}
+          night
+        {% elif h < 11 and s > 20 %}
+          morning
+        {% elif h < 11 %}
+          dawn
+        {% elif h > 15 and s > 20 %}
+          afternoon
+        {% elif h > 15 %}
+          evening
+        {% else %}
+          midday
+        {% endif %}
+
+    # String Lights, Heater, etc.
+    evening_features_enabled:
+      friendly_name: "Evening Features Enabled"
+      value_template: >-
+        {% if states.sun.sun.attributes.elevation < 20 %}
+          {{ states.sensor.awake.state }}
+        {% else %}
+          off
+        {% endif %}
+
+- platform: time_date
+  display_options:
+    - 'time'
+    - 'date'
+    - 'date_time'
+    - 'date_time_iso'
+    - 'time_date'
+    - 'time_utc'
+    - 'beat'
+
+- platform: yr
+
+- platform: darksky
+  api_key: e4d2b20df56cf15da528c117b0619584
+  forecast:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+  monitored_conditions:
+    - icon
+    - summary
+    - nearest_storm_distance
+    - nearest_storm_bearing
+    - humidity
+    - temperature
+    - temperature_high
+    - temperature_low
+    - apparent_temperature
+    - apparent_temperature_high
+    - apparent_temperature_low
+    - wind_speed
+    - wind_bearing
+    - precip_type
+    - precip_probability
+    - precip_accumulation
+    - precip_intensity
+    - precip_intensity_max
+    - uv_index
+    - daily_summary
+    - pressure
+    - visibility
+  scan_interval:
+    minutes: 5

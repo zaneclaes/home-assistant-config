@@ -1,0 +1,39 @@
+automation:
+  - id: sh_spellbook_living_room
+    alias: "Living Room Shell Command"
+    trigger:
+      platform: state
+      entity_id: input_text.sh_spellbook_living_room
+    action:
+      service: shell_command.sh_spellbook_living_room
+  - id: sh_spellbook_loft
+    alias: "Loft Shell Command"
+    trigger:
+      platform: state
+      entity_id: input_text.sh_spellbook_loft
+    action:
+      service: shell_command.sh_spellbook_loft
+  - id: sh_spellbook_den
+    alias: "Den Shell Command"
+    trigger:
+      platform: state
+      entity_id: input_text.sh_spellbook_den
+    action:
+      service: shell_command.sh_spellbook_den
+
+input_text:
+  sh_spellbook_living_room:
+    name: Shell Command for Living Room Spellbook
+  sh_spellbook_loft:
+    name: Shell Command for Loft Spellbook
+  sh_spellbook_den:
+    name: Shell Command for Den Spellbook
+
+shell_command:
+  restart_living_room: "ssh -i /config/ssh/id_rsa -o StrictHostKeyChecking=no pi@192.168.1.201 'sudo reboot'"
+  restart_loft: "ssh -i /config/ssh/id_rsa -o StrictHostKeyChecking=no pi@192.168.1.202 'sudo reboot'"
+  restart_den: "ssh -i /config/ssh/id_rsa -o StrictHostKeyChecking=no pi@192.168.1.203 'sudo reboot'"
+
+  sh_spellbook_living_room: "ssh -i /config/ssh/id_rsa -o StrictHostKeyChecking=no pi@192.168.1.201 '{{ states('input_text.sh_spellbook_living_room') }}'"
+  sh_spellbook_loft: "ssh -i /config/ssh/id_rsa -o StrictHostKeyChecking=no pi@192.168.1.202 '{{ states('input_text.sh_spellbook_loft') }}'"
+  sh_spellbook_den: "ssh -i /config/ssh/id_rsa -o StrictHostKeyChecking=no pi@192.168.1.203 '{{ states('input_text.sh_spellbook_den') }}'"

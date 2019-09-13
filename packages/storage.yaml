@@ -1,0 +1,48 @@
+variable:
+  last_motion_time_storage:
+    value: 'startup'
+
+timer:
+  storage_motion_stop:
+    duration: '00:05:00'
+
+light:
+  - platform: group
+    name: Storage Lights
+    entities:
+    - light.storage_front
+    - light.storage_back
+
+automation:
+  # Turn on hall lights by motion or contact
+  - id: storage_lights_on
+    alias: Storage Lights - On
+    initial_state: 'on'
+    trigger:
+    - entity_id: binary_sensor.storage_motion
+      platform: state
+      to: 'on'
+    condition: []
+    action:
+    - service: script.motion_detected
+      data:
+        timer_id: timer.storage_motion_stop
+        area_id: storage
+    - service: light.turn_on
+      data:
+        entity_id: light.storage_lights
+
+  # Turn off hall lights by timer
+  - id: storage_lights_off
+    alias: Storage Lights - Off
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.storage_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.storage_lights

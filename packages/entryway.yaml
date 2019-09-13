@@ -1,0 +1,85 @@
+automation:
+  - id: gate_light_on
+    alias: Gate Light On
+    initial_state: 'on'
+    trigger:
+    - platform: sun
+      event: sunset
+      offset: -00:01:00
+    action:
+      service: light.turn_on
+      entity_id: light.gate
+
+  - id: gate_light_off
+    alias: Gate Light Off
+    initial_state: 'on'
+    trigger:
+    - platform: sun
+      event: sunrise
+      offset: +00:01:00
+    action:
+      service: light.turn_off
+      entity_id: light.gate
+
+sensor:
+  - platform: template
+    sensors:
+      front_door_status:
+        # Yale values at: https://github.com/openhab/openhab2-addons/issues/770
+        value_template: >-
+          {% if is_state("binary_sensor.front_door_open", "on") -%}
+            Open
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "9") %}
+            Jammed
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "19") -%}
+            {%- if is_state("sensor.front_door_deadbolt_alarm_level", "251") -%}
+              Zane
+            {%- elif is_state("sensor.front_door_deadbolt_alarm_level", "1") -%}
+              Julie
+            {%- elif is_state("sensor.front_door_deadbolt_alarm_level", "2") -%}
+              Cohost
+            {%- elif is_state("sensor.front_door_deadbolt_alarm_level", "3") -%}
+              Airbnb Guest
+            {%- else -%}
+              User {{ sensor.front_door_deadbolt_alarm_level }}
+            {%- endif %}
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "21") %}
+            Manually Locked
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "22") %}
+            Manually Unlocked
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "24") %}
+            Remote Locked
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "25") %}
+            Remote Unlocked
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "27") %}
+            Auto-Relocked
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "161") %}
+            Tampered!
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "0") %}
+            Initializing?
+          {%- else -%}
+            Unknown Level {{ states.sensor.front_door_deadbolt_alarm_level.state }} Type {{ states.sensor.front_door_deadbolt_alarm_type.state }}
+          {%- endif %}
+        icon_template: >-
+          {% if is_state("binary_sensor.front_door_open", "on") -%}
+            mdi:door-open
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "9") -%}
+            mdi:warning
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "19") -%}
+            mdi:lock-open-outline
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "21") %}
+            mdi:lock-outline
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "22") %}
+            mdi:lock-open-outline
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "24") %}
+            mdi:lock-outline
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "25") %}
+            mdi:lock-open-outline
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "27") %}
+            mdi:lock-outline
+          {%- elif is_state("sensor.front_door_deadbolt_alarm_type", "161") %}
+            mdi:alert
+          {%- else -%}
+            mdi:lock-open
+          {%- endif %}
+        friendly_name: 'Front Door Status'

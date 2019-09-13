@@ -1,0 +1,128 @@
+automation:
+  - id: quad_button_1_tap
+    alias: "Quad Button 1 (Tap)"
+    initial_state: 'on'
+    hide_entity: true
+    trigger:
+      platform: event
+      event_type: zwave.scene_activated
+      event_data:
+        entity_id: zwave.quad_button
+        scene_id: 1
+        scene_data: 0
+    action:
+      - service: light.turn_off
+        data:
+          entity_id: light.all_lights
+
+  - id: quad_button_1_hold
+    alias: "Quad Button 1 (Hold)"
+    initial_state: 'on'
+    hide_entity: true
+    trigger:
+      platform: event
+      event_type: zwave.scene_activated
+      event_data:
+        entity_id: zwave.quad_button
+        scene_id: 1
+        scene_data: 2
+    action:
+      - service: light.turn_on
+        data:
+          entity_id: light.all_lights
+
+  - id: quad_button_2_tap
+    alias: "Quad Button 2 (Tap)"
+    initial_state: 'on'
+    hide_entity: true
+    trigger:
+      platform: event
+      event_type: zwave.scene_activated
+      event_data:
+        entity_id: zwave.quad_button
+        scene_id: 2
+        scene_data: 0
+    action:
+      - service: media_player.media_pause
+        data:
+          entity_id: group.all_speakers
+
+  - id: quad_button_2_hold
+    alias: "Quad Button 2 (Hold)"
+    initial_state: 'on'
+    hide_entity: true
+    trigger:
+      platform: event
+      event_type: zwave.scene_activated
+      event_data:
+        entity_id: zwave.quad_button
+        scene_id: 2
+        scene_data: 2
+    action:
+      - service: media_player.media_play
+        data:
+          entity_id: group.all_speakers
+
+  - id: quad_button_3_tap
+    alias: "Quad Button 3 (Tap)"
+    initial_state: 'on'
+    hide_entity: true
+    trigger:
+      platform: event
+      event_type: zwave.scene_activated
+      event_data:
+        entity_id: zwave.quad_button
+        scene_id: 3
+        scene_data: 0
+    action:
+      - service: light.turn_on
+        data:
+          entity_id: light.den_dimmer_outlet
+
+  # - id: quad_button_3_hold
+  #   alias: "Quad Button 3 (Hold)"
+  #   initial_state: 'on'
+  #   hide_entity: true
+  #   trigger:
+  #     platform: event
+  #     event_type: zwave.scene_activated
+  #     event_data:
+  #       entity_id: zwave.quad_button
+  #       scene_id: 3
+  #       scene_data: 2
+  #   action:
+  #     - service: light.turn_off
+  #       data:
+  #         entity_id: light.den_dimmer_outlet
+
+  # - id: quad_button_4_tap
+  #   alias: "Quad Button 4 (Tap)"
+  #   initial_state: 'on'
+  #   hide_entity: true
+  #   trigger:
+  #     platform: event
+  #     event_type: zwave.scene_activated
+  #     event_data:
+  #       entity_id: zwave.quad_button
+  #       scene_id: 4
+  #   action:
+  #     - service: light.turn_on
+  #       data:
+  #         entity_id: light.den_dimmer_outlet
+
+  # - id: quad_button_4_hold
+  #   alias: "Quad Button 4 (Hold)"
+  #   initial_state: 'on'
+  #   hide_entity: true
+  #   trigger:
+  #     platform: event
+  #     event_type: zwave.scene_activated
+  #     event_data:
+  #       entity_id: zwave.quad_button
+  #       scene_id: 4
+  #       scene_data: 2
+  #   action:
+  #     - service: light.turn_off
+  #       data:
+  #         entity_id: light.den_dimmer_outlet
+

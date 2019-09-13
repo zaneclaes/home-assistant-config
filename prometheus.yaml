@@ -1,0 +1,63 @@
+namespace: ha
+include:
+  domains:
+    - sensor
+    - binary_sensor
+    - group
+    - light
+    - device_tracker
+    - input_boolean
+# exclude:
+#   entities:
+filter:
+  exclude_entities:
+    - climate.loft_thermostat_ac
+    - climate.loft_thermostat_heater
+    - climate.living_room
+    - binary_sensor.updater
+    - sensor.door_lock_batteries_front_door
+    - sensor.dark_sky_daytime_high_apparent_temperature_0d
+    - sensor.dark_sky_daytime_high_apparent_temperature_1d
+    - sensor.dark_sky_daytime_high_apparent_temperature_2d
+    - sensor.dark_sky_daytime_high_apparent_temperature_3d
+    - sensor.dark_sky_daytime_high_apparent_temperature_4d
+    - sensor.dark_sky_daytime_high_apparent_temperature_5d
+    - sensor.dark_sky_daytime_high_temperature_0d
+    - sensor.dark_sky_daytime_high_temperature_1d
+    - sensor.dark_sky_daytime_high_temperature_2d
+    - sensor.dark_sky_daytime_high_temperature_3d
+    - sensor.dark_sky_daytime_high_temperature_4d
+    - sensor.dark_sky_daytime_high_temperature_5d
+    - sensor.dark_sky_nearest_storm_bearing
+    - sensor.dark_sky_overnight_low_apparent_temperature_0d
+    - sensor.dark_sky_overnight_low_apparent_temperature_1d
+    - sensor.dark_sky_overnight_low_apparent_temperature_2d
+    - sensor.dark_sky_overnight_low_apparent_temperature_3d
+    - sensor.dark_sky_overnight_low_apparent_temperature_4d
+    - sensor.dark_sky_overnight_low_apparent_temperature_5d
+    - sensor.dark_sky_overnight_low_temperature_0d
+    - sensor.dark_sky_overnight_low_temperature_1d
+    - sensor.dark_sky_overnight_low_temperature_2d
+    - sensor.dark_sky_overnight_low_temperature_3d
+    - sensor.dark_sky_overnight_low_temperature_4d
+    - sensor.dark_sky_overnight_low_temperature_5d
+    - sensor.dark_sky_temperature
+    - sensor.dark_sky_wind_bearing
+    - sensor.dark_sky_wind_bearing_0d
+    - sensor.dark_sky_wind_bearing_1d
+    - sensor.dark_sky_wind_bearing_2d
+    - sensor.dark_sky_wind_bearing_3d
+    - sensor.dark_sky_wind_bearing_4d
+    - sensor.dark_sky_wind_bearing_5d
+    - sensor.dark_sky_uv_index
+    - sensor.dark_sky_uv_index_0d
+    - sensor.dark_sky_uv_index_1d
+    - sensor.dark_sky_uv_index_2dA
+    - sensor.dark_sky_uv_index_3d
+    - sensor.dark_sky_uv_index_4d
+    - sensor.dark_sky_uv_index_5d
+    - sensor.dark_sky_apparent_temperature
+    - sensor.dark_sky_precip_intensity
+    - sensor.dark_sky_humidity
+    - sensor.living_room_megasensor_ultraviolet
+    - sensor.den_bathroom_megasensor_ultraviolet

@@ -1,0 +1,220 @@
+homeassistant:
+  # Name of the location where Home Assistant is running
+  name: Home
+  # Location required to calculate the time the sun rises and sets
+  latitude: 37.775617
+  longitude: -122.407771
+  # Impacts weather/sunrise data (altitude above sea level in meters)
+  elevation: 0
+  # metric for Metric, imperial for Imperial
+  unit_system: imperial
+  # Pick yours from here: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  time_zone: America/Los_Angeles
+  # Customization file
+  customize_glob:
+    "light.*":
+      custom_ui_state_card: state-card-custom-ui
+      state_card_mode: break-slider
+      stretch_slider: true
+      hide_control: false
+      show_last_changed: false
+      slider_theme:
+        min: 1
+        max: 200
+        pin: true
+        off_when_min: false
+        report_when_not_changed: false
+      templates:
+        icon: if (state === 'on') return 'mdi:lightbulb-on'; else return 'mdi:lightbulb-off';
+    "*.*_lights":
+      templates:
+        icon: if (state === 'on') return 'mdi:lightbulb-on'; else return 'mdi:lightbulb-off';
+    "binary_sensor.*_door_open":
+      custom_ui_state_card: state-card-custom-ui
+      templates:
+        state: if (state === 'on') return 'open'; else return 'closed';
+        icon: if (state === 'on') return 'mdi:door-open'; else return 'mdi:door-closed';
+    "sensor.*_luminance":
+      icon: mdi:candle
+    "sensor.*_temperature":
+      icon: mdi:thermometer-lines
+    "sensor.*_ultraviolet":
+      icon: mdi:sunglasses
+    "sensor.*_humidity":
+      icon: mdi:water-percent
+    "media_player.*_tv":
+      templates:
+        icon: if (state === 'on') return 'mdi:television'; else return 'mdi:television-off';
+    "*.*_projector":
+      icon: mdi:projector
+    "*.*_ac":
+      icon: mdi:air-conditioner
+    "*.*_heater":
+      icon: mdi:radiator
+    "scene.*_pink":
+      friendly_name: Pink
+      icon: mdi:flower
+    "scene.*_blue":
+      friendly_name: Blue
+      icon: mdi:flower
+    "scene.*_reading":
+      friendly_name: Reading
+      icon: mdi:book-open-variant
+    "scene.*_relax":
+      friendly_name: Relax
+      icon: mdi:desk-lamp
+    "scene.*_energize":
+      friendly_name: Energy
+      icon: mdi:weather-lightning
+    "scene.*_off":
+      icon: mdi:power
+    "scene.*_sunset":
+      icon: mdi:weather-sunset-down
+    "*.*_fan":
+      templates:
+        icon: if (state === 'on') return 'mdi:fan'; else return 'mdi:fan-off';
+    "media_player.*_sonos":
+      templates:
+        icon: if (state === 'playing') return 'mdi:pause'; else return 'mdi:music';
+    "sensor.*_rssi":
+      templates:
+        name: return f'{state}';
+        icon: >-
+          if (state === 'unknown') return 'mdi:signal-off';
+          if (state <= -99) return 'mdi:signal-cellular-outline';
+          if (state <= -80) return 'mdi:signal-cellular-1';
+          if (state <= -40) return 'mdi:signal-cellular-2';
+          if (state <= 0) return 'mdi:signal-cellular-3';
+          else return 'mdi:signal-off';
+  packages: !include_dir_named packages
+  auth_providers:
+    - type: homeassistant
+    - type: trusted_networks
+      allow_bypass_login: true
+      trusted_networks:
+        - !secret ip_desk
+        - !secret ip_zbookpro_wifi
+        - !secret ip_spellbook_living_room
+        - !secret ip_spellbook_loft
+        - !secret ip_spellbook_den
+      trusted_users:
+        !secret ip_spellbook_living_room:   !secret guest_user
+        !secret ip_spellbook_loft:          !secret guest_user
+        !secret ip_spellbook_den:           !secret guest_user
+
+# Enables the frontend
+frontend:
+  javascript_version: latest
+  themes: !include_dir_merge_named themes
+  extra_html_url:
+    - /local/custom_ui/state-card-custom-ui.html
+  extra_html_url_es5:
+    - /local/custom_ui/state-card-custom-ui-es5.html
+
+mqtt:
+  broker: !secret ip_self
+
+# Enables configuration UI
+config:
+
+weather:
+  - platform: darksky
+    api_key: !secret darksky_api_key
+
+# Uncomment this if you are using SSL/TLS, running in Docker container, etc.
+http:
+  server_port: 8123
+  base_url: !secret base_url
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - 192.168.1.100
+    - 192.168.1.1
+  cors_allowed_origins:
+    - https://google.com
+    - https://www.home-assistant.io
+    # - http://house.local
+  ip_ban_enabled: false
+  # login_attempts_threshold: 5
+
+# Checks for available updates
+# Note: This component will send some information about your system to
+# the developers to assist with development of Home Assistant.
+# For more information, please see:
+# https://home-assistant.io/blog/2016/10/25/explaining-the-updater/
+updater:
+  # Optional, allows Home Assistant developers to focus on popular components.
+  # include_used_components: true
+
+# Discover some devices automatically
+discovery:
+
+# Allows you to issue voice commands from the frontend in enabled browsers
+conversation:
+
+# Enables support for tracking state changes over time
+history:
+
+# View all events in a logbook
+logbook:
+
+logger: !include logger.yaml
+
+# Enables a map showing the location of tracked devices
+map:
+
+# Track the sun
+sun:
+
+# Allow diagnosing system problems
+system_health:
+
+# Sensors
+sensor: !include sensors.yaml
+
+tuya:
+  username: !secret home_owner_email
+  password: !secret tuya_password
+  country_code: 1
+
+# Text to speech
+tts:
+  - platform: google_translate
+    service_name: google_say
+
+prometheus: !include prometheus.yaml
+
+device_tracker:
+  - platform: netgear
+    password: !secret orbi_password
+
+# Cloud
+cloud:
+
+# Enables Nest
+nest:
+  client_id: !secret nest_client_id
+  client_secret: !secret nest_client_secret
+
+# Enables push notifications
+notify:
+  - platform: html5
+    name: "House"
+    vapid_pub_key: !secret vapid_pub_key
+    vapid_prv_key: !secret vapid_prv_key
+    vapid_email: !secret vapid_email
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+
+light:
+  - platform: decora_wifi
+    username: !secret home_owner_email
+    password: !secret decora_wifi_password
+
+scene: !include scenes.yaml
+
+media_player:
+  - platform: spotify
+    client_id: !secret spotify_client_id
+    client_secret: !secret spotify_secret

@@ -1,0 +1,106 @@
+variable:
+  last_motion_time_patio:
+    value: 'startup'
+
+sensor:
+  - platform: template
+    sensors:
+      patio_occupied:
+        friendly_name: "Patio Occupied?"
+        value_template: "{{ states.binary_sensor.patio_door_open.state }}"
+
+timer:
+  patio_motion_stop:
+    duration: '03:00:00'
+
+automation:
+  # Turn on patio lights
+  - id: patio_lights_on
+    alias: Patio Lights On
+    initial_state: 'on'
+    trigger:
+    - entity_id: sensor.patio_occupied
+      platform: state
+      to: 'on'
+    - entity_id: sensor.evening_features_enabled
+      platform: state
+      to: 'on'
+    condition:
+    - condition: state
+      entity_id: sensor.patio_occupied
+      state: 'on'
+    - condition: state
+      entity_id: sensor.evening_features_enabled
+      state: 'on'
+    action:
+    - service: switch.turn_on
+      entity_id: switch.patio_lights
+    - service: timer.start
+      data_template:
+        entity_id: "timer.patio_motion_stop"
+
+  # Turn off patio lights
+  - id: patio_lights_off
+    alias: Patio Lights Off
+    initial_state: 'on'
+    trigger:
+    - entity_id: sensor.patio_occupied
+      platform: state
+      to: 'off'
+    - entity_id: sensor.evening_features_enabled
+      platform: state
+      to: 'off'
+    - event_data:
+        entity_id: timer.patio_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: switch.turn_off
+      entity_id: switch.patio_lights
+
+  # Heater on when patio occupied, evening, and temperature is low enough
+  - id: patio_heater_on
+    alias: Patio Heater On
+    initial_state: 'on'
+    trigger:
+    - entity_id: sensor.patio_occupied
+      platform: state
+      to: 'on'
+    - entity_id: sensor.evening_features_enabled
+      platform: state
+      to: 'on'
+    condition:
+    - condition: state
+      entity_id: sensor.patio_occupied
+      state: 'on'
+    - condition: state
+      entity_id: sensor.evening_features_enabled
+      state: 'on'
+    - condition: template
+      value_template: '{{ states.sensor.dark_sky_apparent_temperature.state | float < 60 }}'
+    action:
+    - service: switch.turn_on
+      entity_id: switch.patio_heater
+
+  # Heater off
+  - id: patio_heater_off
+    alias: Patio Heater Off
+    initial_state: 'on'
+    trigger:
+    - entity_id: sensor.patio_occupied
+      platform: state
+      to: 'off'
+    - entity_id: sensor.evening_features_enabled
+      platform: state
+      to: 'off'
+    - platform: template
+      value_template: '{{ states.sensor.patio_door_temperature.state | float > 75 }}'
+    - event_data:
+        entity_id: timer.patio_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: switch.turn_off
+      entity_id: switch.patio_heater

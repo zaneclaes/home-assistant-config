@@ -1,0 +1,12 @@
+default: info
+logs:
+  homeassistant.components.light.decora_wifi: debug
+  homeassistant.components.harmony: debug
+  homeassistant.components.zwave: debug
+  homeassistant.components.command_line.switch: error
+  homeassistant.components.prometheus: error
+  # homeassistant.helpers.script: debug
+  # homeassistant.components: info
+  # homeassistant.components.zha: debug
+  # bellows: debug
+  # zigpy: debug

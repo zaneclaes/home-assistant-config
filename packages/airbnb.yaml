@@ -1,0 +1,29 @@
+homeassistant:
+  customize_glob:
+    "input_boolean.guest_mode":
+      templates:
+        friendly_name: if (state === 'on') return 'Guest'; else return 'Home';
+        icon: if (state === 'on') return 'mdi:incognito'; else return 'mdi:home-account';
+
+input_boolean:
+  guest_mode:
+    name: Guest Mode
+
+input_text:
+  guest_door_code:
+    name: Guest Door Code
+
+automation:
+  - id: set_guest_door_code
+    alias: "Set the Guest Door Code"
+    trigger:
+    - platform: homeassistant
+      event: start
+    - platform: state
+      entity_id: input_text.guest_door_code
+    action:
+      service: lock.set_usercode
+      data_template:
+        node_id: 8
+        code_slot: 3
+        usercode: "{{ states.input_text.guest_door_code.state }}"

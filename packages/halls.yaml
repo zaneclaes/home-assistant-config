@@ -1,0 +1,56 @@
+variable:
+  last_motion_time_halls:
+    value: 'startup'
+
+timer:
+  halls_motion_stop:
+    duration: '00:05:00'
+
+light:
+  - platform: group
+    name: Hall Lights
+    entities:
+    - light.halls_entry
+    - light.halls_stairs_1
+    - light.halls_stairs_2
+
+automation:
+  # Turn on hall lights by motion or contact
+  - id: hall_lights_on
+    alias: Hall Lights - On
+    initial_state: 'on'
+    trigger:
+    - entity_id: binary_sensor.front_door_open
+      platform: state
+      to: 'on'
+    - entity_id: binary_sensor.halls_motion_1
+      platform: state
+      to: 'on'
+    - entity_id: binary_sensor.halls_motion_2
+      platform: state
+      to: 'on'
+    condition: []
+    action:
+    - service: script.motion_detected
+      data:
+        timer_id: timer.halls_motion_stop
+        area_id: halls
+    - service: script.lights_ambient_motion
+      data:
+        light_id: light.hall_lights
+
+  # Turn off hall lights by timer
+  - id: hall_lights_off
+    alias: Hall Lights - Off if no motion in 30 sec
+    initial_state: 'on'
+    trigger:
+    - event_data:
+        entity_id: timer.halls_motion_stop
+      event_type: timer.finished
+      platform: event
+    condition: []
+    action:
+    - service: light.turn_off
+      data:
+        entity_id: light.hall_lights
+        transition: 5

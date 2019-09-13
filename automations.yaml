@@ -1,0 +1,35 @@
+# - id: projector_ensure_off
+#   alias: Projector Off (if not already)
+#   initial_state: 'on'
+#   trigger:
+#   - event_data: {}
+#     event_type: event_turn_off_projector
+#     platform: event
+#   condition:
+#   - condition: state
+#     entity_id: switch.projector_harmony_activity
+#     state: 'on'
+#   action:
+#   - data:
+#       entity_id: switch.projector_harmony_activity
+#     service: switch.turn_off
+
+- alias: 'Set HA theme for day and night'
+  trigger:
+    - platform: homeassistant
+      event: start
+    - platform: state
+      entity_id: sun.sun
+      to: above_horizon
+    - platform: state
+      entity_id: sun.sun
+      to: below_horizon
+  action:
+    - service_template: frontend.set_theme
+      data_template:
+        name: >
+          {% if states.sun.sun.state == "above_horizon" %}
+            Light - Navy Blue
+          {% else %}
+            Light - Navy Blue
+          {% endif %}

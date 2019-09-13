@@ -1,0 +1,165 @@
+automation:
+  - id: presence_changed
+    alias: "Presence Changed"
+    initial_state: 'on'
+    hide_entity: true
+    trigger:
+      - platform: state
+        entity_id: sensor.presence
+    action:
+      - service: system_log.write
+        data_template:
+          message: '{{ states.sensor.presence.attributes.device }}'
+
+#   - id: home_arrive
+#     alias: "Home - Arrive"
+#     initial_state: 'on'
+#     hide_entity: true
+#     trigger:
+#       - platform: numeric_state
+#         entity_id: sensor.home_occupancy_confidence
+#         above: 10
+#     action:
+#       - service: input_boolean.turn_on
+#         data:
+#           entity_id: input_boolean.occupancy
+
+#   - id: home_depart
+#     alias: "Home - Depart"
+#     initial_state: 'on'
+#     hide_entity: true
+#     trigger:
+#       - platform: numeric_state
+#         entity_id: sensor.home_occupancy_confidence
+#         below: 10
+#     action:
+#       - service: input_boolean.turn_off
+#         data:
+#           entity_id: input_boolean.occupancy
+
+# device_tracker:
+#   - platform: mqtt
+#     devices:
+#       zane_den: 'monitor/spellbook-den/vandroid/device_tracker'
+#       zane_living_room: 'monitor/spellbook-living-room/vandroid/device_tracker'
+#       zane_loft: 'monitor/spellbook-loft/vandroid/device_tracker'
+
+sensor:
+  - name: 'Presence'
+    platform: mqtt
+    state_topic: '/beacon'
+    json_attributes_topic: '/beacon'
+    value_template: '{{value_json.device}}-{{ value_json.rssi }}'
+
+  - name: 'Zane Loft'
+    platform: mqtt
+    state_topic: 'monitor/spellbook-loft/vandroid'
+    json_attributes_topic: "monitor/spellbook-loft/vandroid"
+    value_template: '{{ value_json.confidence }}'
+    unit_of_measurement: '%'
+  - name: 'Zane Loft Raw RSSI'
+    platform: mqtt
+    state_topic: 'monitor/spellbook-loft/vandroid/rssi'
+    unit_of_measurement: 'dBm'
+  - name: "Zane Loft Smooth RSSI"
+    platform: filter
+    entity_id: sensor.zane_loft_raw_rssi
+    filters:
+      - filter: outlier
+        window_size: 2
+        radius: 1.0
+      - filter: lowpass
+        time_constant: 2
+      - filter: time_simple_moving_average
+        window_size: 00:00:10
+        precision: 1
+
+  - name: 'Zane Living Room'
+    platform: mqtt
+    state_topic: 'monitor/spellbook-living-room/vandroid'
+    json_attributes_topic: 'monitor/spellbook-living-room/vandroid'
+    value_template: '{{ value_json.confidence }}'
+    unit_of_measurement: '%'
+  - name: 'Zane Living Room Raw RSSI'
+    platform: mqtt
+    state_topic: 'monitor/spellbook-living-room/vandroid/rssi'
+    unit_of_measurement: 'dBm'
+  - platform: filter
+    name: "Zane Living Room Smooth RSSI"
+    entity_id: sensor.zane_living_room_raw_rssi
+    filters:
+      - filter: outlier
+        window_size: 2
+        radius: 1.0
+      - filter: lowpass
+        time_constant: 2
+      - filter: time_simple_moving_average
+        window_size: 00:00:10
+        precision: 1
+
+  - name: 'Zane Den'
+    platform: mqtt
+    state_topic: 'monitor/spellbook-den/vandroid'
+    json_attributes_topic: 'monitor/spellbook-den/vandroid'
+    value_template: '{{ value_json.confidence }}'
+    unit_of_measurement: '%'
+  - name: 'Zane Den Raw RSSI'
+    platform: mqtt
+    state_topic: 'monitor/spellbook-den/vandroid/rssi'
+    unit_of_measurement: 'dBm'
+  - platform: filter
+    name: "Zane Den Smooth RSSI"
+    entity_id: sensor.zane_den_raw_rssi
+    filters:
+      - filter: outlier
+        window_size: 2
+        radius: 1.0
+      - filter: lowpass
+        time_constant: 2
+      - filter: time_simple_moving_average
+        window_size: 00:00:10
+        precision: 1
+
+  - platform: min_max
+    name: "Zane at Home Confidence"
+    type: max
+    round_digits: 0
+    entity_ids:
+      - sensor.zane_den
+      - sensor.zane_loft
+      - sensor.zane_living_room
+
+  - platform: min_max
+    name: "Zane Max RSSI"
+    type: max
+    round_digits: 0
+    entity_ids:
+      - sensor.zane_loft_smooth_rssi
+      - sensor.zane_den_smooth_rssi
+      - sensor.zane_living_room_smooth_rssi
+
+  - platform: template
+    sensors:
+      zane_min_rssi:
+        friendly_name: "Zane Min RSSI"
+        value_template: >-
+          {% set loft_rssi = states('sensor.zane_loft_smooth_rssi') | int %}
+          {% set den_rssi = states('sensor.zane_den_smooth_rssi') | int %}
+          {% set living_room_rssi = states('sensor.zane_living_room_smooth_rssi') | int %}
+          {% set rssis = (loft_rssi,den_rssi,living_room_rssi) | reject("equalto", -99) | list %}
+          {{ rssis|min }}
+      zane_closest_room:
+        friendly_name: "Zane Closest to Area"
+        value_template: >-
+          {% set targ_rssi = states.sensor.zane_max_rssi %}
+          {% if (states.sensor.zane_at_home_confidence.state | int) < 50 %}
+            away
+          {% elif loft_rssi == targ_rssi %}
+            loft
+          {% elif den_rssi == targ_rssi %}
+            den
+          {% elif living_room_rssi == targ_rssi %}
+            living_room
+          {% else %}
+            unknown
+          {% endif %}

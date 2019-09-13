@@ -1,0 +1,76 @@
+group:
+  all_batteries:
+    name: All Batteries
+    icon: mdi:lightbulb-on-outline
+    entities:
+    - sensor.den_bathroom_door_battery
+    - sensor.den_bathroom_motion_battery
+    - sensor.den_closet_left_motion_battery
+    - sensor.den_closet_right_motion_battery
+    - sensor.front_door_battery
+    - sensor.halls_motion_battery_1
+    - sensor.halls_motion_battery_2
+    - sensor.living_room_motion_battery
+    - sensor.loft_bathroom_door_battery
+    - sensor.loft_bathroom_motion_battery
+    - sensor.loft_door_battery
+    - sensor.patio_door_battery
+
+  all_speakers:
+    name: All Speakers
+    icon: mdi:speaker
+    entities:
+    - media_player.loft_sonos
+    - media_player.den_sonos
+    - media_player.living_room_sonos
+
+  all_media:
+    name: All Media
+    icon: mdi:library-video
+    entities:
+    - group.all_speakers
+    - media_player.den_tv
+
+  all_devices:
+    name: All Devices
+    icon: mdi:power
+    entities:
+    - light.all_lights
+    - group.all_media
+    - switch.projector_harmony_activity
+
+script:
+  all_devices_off:
+    alias: Turn Off All Devices
+    sequence:
+    - service: light.turn_off
+      data:
+        entity_id: light.all_lights
+        transition: 5
+    - service: media_player.turn_off
+      data:
+       entity_id: group.all_speakers
+    - service: switch.turn_off
+      entity_id: switch.patio_lights
+    - service: switch.turn_off
+      entity_id: switch.patio_heater
+
+light:
+  - platform: group
+    name: All Lights
+    entities:
+    - light.den_lights
+    - light.living_room_lights
+    - light.loft_lights
+    - light.hall_lights
+    - light.storage_lights
+
+automation:
+  - id: all_off_early_morning
+    alias: All Off in Early Morning
+    initial_state: 'on'
+    trigger:
+    - platform: time
+      at: "04:00:00"
+    action:
+    - service: script.all_devices_off
