@@ -2,6 +2,12 @@ variable:
   last_motion_time_patio:
     value: 'startup'
 
+climate:
+  - platform: generic_thermostat
+    name: Patio Heat
+    heater: switch.patio_heater
+    target_sensor: sensor.patio_door_temperature
+
 sensor:
   - platform: template
     sensors:

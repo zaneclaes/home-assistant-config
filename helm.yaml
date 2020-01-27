@@ -1,7 +1,7 @@
 hostNetwork: true
 
 image:
-  tag: 0.98.5
+  tag: 0.104.2
 
 persistence:
   hostPath: /home/zaneclaes/home-assistant

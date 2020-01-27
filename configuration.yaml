@@ -182,7 +182,7 @@ tts:
   - platform: google_translate
     service_name: google_say
 
-prometheus: !include prometheus.yaml
+# prometheus: !include prometheus.yaml
 
 device_tracker:
   - platform: netgear
